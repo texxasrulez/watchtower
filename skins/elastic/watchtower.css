@@ -1,0 +1,127 @@
+/* Watchtower - Elastic skin */
+
+/* Icon in left Settings navigation */
+.listing.iconized li.watchtower > a:before {
+    content: "\f06e" !important;
+}
+
+/* Base layout */
+#watchtower-settings {
+    padding: 1rem;
+}
+
+#watchtower-settings .section {
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+}
+
+/* Headings */
+#watchtower-settings h1 {
+    font-size: 1.4rem;
+    margin: 0 0 0.75rem 0;
+}
+
+#watchtower-settings h2.section-title {
+    font-size: 1.1rem;
+    margin: 1.0rem 0 0.2rem 0;
+    font-weight: 600;
+}
+
+/* Scroll containers (light theme defaults) */
+#watchtower-settings .watchtower-sessions-wrap,
+#watchtower-settings .watchtower-logins-wrap {
+    margin-top: 0.25rem;
+    max-height: 40vh;
+    overflow-y: auto;
+    border: 1px solid #d0d4da;
+    background-color: #ffffff;
+}
+
+/* Tables */
+#watchtower-settings table.watchtower-sessions,
+#watchtower-settings table.watchtower-logins {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+#watchtower-settings table.watchtower-sessions thead th,
+#watchtower-settings table.watchtower-logins thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #f3f5f7;
+    border-bottom: 1px solid #d0d4da;
+    padding: 0.35rem 0.5rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+#watchtower-settings table.watchtower-sessions tbody td,
+#watchtower-settings table.watchtower-logins tbody td {
+    padding: 0.25rem 0.5rem;
+    border-bottom: 1px solid #eef0f3;
+    white-space: nowrap;
+}
+
+#watchtower-settings td.watchtower-agent,
+#watchtower-settings td.watchtower-device {
+    max-width: 26rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Result colouring */
+#watchtower-settings td.watchtower-result.result-ok {
+    color: #1b8733;
+    font-weight: 600;
+}
+
+#watchtower-settings td.watchtower-result.result-fail {
+    color: #d93025;
+    font-weight: 600;
+}
+
+/* Empty state */
+#watchtower-settings .watchtower-empty {
+    font-style: italic;
+    color: #666666;
+}
+
+/* ------------------------------------------------------------------
+ * Dark mode overrides (Elastic sets a dark layout class on <body>)
+ * If your dark class differs, replace `body.layout-dark` with it.
+ * ------------------------------------------------------------------ */
+
+/* Container + scroll area */
+html.dark-mode #watchtower-settings .watchtower-sessions-wrap,
+html.dark-mode #watchtower-settings .watchtower-logins-wrap {
+    border-color: #30343a;
+    background-color: #1d2127;
+}
+
+/* Table header */
+html.dark-mode #watchtower-settings table.watchtower-sessions thead th,
+html.dark-mode #watchtower-settings table.watchtower-logins thead th {
+    background-color: #262b33;
+    border-bottom-color: #30343a;
+    color: #e0e4ea;
+}
+
+/* Table body rows */
+html.dark-mode #watchtower-settings table.watchtower-sessions tbody td,
+html.dark-mode #watchtower-settings table.watchtower-logins tbody td {
+    border-bottom-color: #262b33;
+    color: #dde2eb;
+}
+
+/* Slightly muted IP / agent text */
+html.dark-mode #watchtower-settings td.watchtower-agent,
+html.dark-mode #watchtower-settings td.watchtower-device {
+    color: #c0c6d2;
+}
+
+/* Empty state in dark mode */
+html.dark-mode #watchtower-settings .watchtower-empty {
+    color: #9aa1b0;
+}

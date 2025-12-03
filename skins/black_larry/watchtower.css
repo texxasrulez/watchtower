@@ -1,0 +1,104 @@
+/* Watchtower - Black Larry skin */
+
+/* Settings list icon (normal / inactive) */
+#settings-sections li a.watchtower {
+    background-image: url("./images/settings_watchtower.svg") !important;
+    background-repeat: no-repeat !important;
+    background-position: 8px center !important;
+    background-size: 20px 20px !important;
+    padding-left: 36px; /* ensure text doesn't overlap the icon */
+}
+
+/* Settings list icon (active/selected) */
+#settings-sections li.selected a.watchtower,
+#settings-sections li a.watchtower.selected {
+    background-image: url("./images/settings_watchtower_active.svg") !important;
+}
+
+/* Layout */
+#watchtower-settings {
+    padding: 1rem;
+}
+
+#watchtower-settings .section {
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+}
+
+/* Headings */
+#watchtower-settings h1 {
+    font-size: 1.4rem;
+    margin: 0 0 0.75rem 0;
+}
+
+#watchtower-settings h2.section-title {
+    font-size: 1.1rem;
+    margin: 1.0rem 0 0.2rem 0;
+    font-weight: bold;
+}
+
+/* Scroll containers */
+#watchtower-settings .watchtower-sessions-wrap,
+#watchtower-settings .watchtower-logins-wrap {
+    margin-top: 0.25rem;
+    max-height: 40vh; /* enough room for both tables */
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    background-color: #fff;
+}
+
+/* Tables */
+#watchtower-settings table.watchtower-sessions,
+#watchtower-settings table.watchtower-logins {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+#watchtower-settings table.watchtower-sessions thead th,
+#watchtower-settings table.watchtower-logins thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #484853;
+	background: -moz-linear-gradient(top, #000 0%, #484853 100%);
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#000), color-stop(100%,#484853));
+	background: -ms-linear-gradient(top, #000 0%, #484853 100%);
+	background: linear-gradient(to bottom, #000 0%, #484853 100%);
+    border-bottom: 1px solid #ccc;
+    padding: 0.35rem 0.5rem;
+    color: #fff;
+    text-align: left;
+    font-weight: bold;
+}
+
+#watchtower-settings table.watchtower-sessions tbody td,
+#watchtower-settings table.watchtower-logins tbody td {
+    padding: 0.25rem 0.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    white-space: nowrap;
+}
+
+#watchtower-settings td.watchtower-agent,
+#watchtower-settings td.watchtower-device {
+    max-width: 26rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Result colouring */
+#watchtower-settings td.watchtower-result.result-ok {
+    color: #1b8733;
+    font-weight: bold;
+}
+
+#watchtower-settings td.watchtower-result.result-fail {
+    color: #d93025;
+    font-weight: bold;
+}
+
+/* Empty state */
+#watchtower-settings .watchtower-empty {
+    font-style: italic;
+    color: #666;
+}

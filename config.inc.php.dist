@@ -1,0 +1,38 @@
+<?php
+
+// Who can see Watchtower
+$config['watchtower_admin_only']          = true;
+$config['watchtower_allow_user_view_own'] = true;
+
+// Debug logging
+$config['watchtower_debug']               = false;
+
+// Login events log (JSONL + Roundcube lines)
+$config['watchtower_logins_file']         = 'logs/userlogins.log';
+
+/**
+ * Session backend for "Recent Sessions".
+ *
+ * 'auto'  - detect from session.save_handler (redis, apcu → those; otherwise db)
+ * 'db'    - use Roundcube db session table (default)
+ * 'redis' - use Redis (Roundcube/ PHP redis handler)
+ * 'apcu'  - use APCu (Roundcube APCu backend)
+ */
+$config['watchtower_session_backend'] = 'auto';
+
+/**
+ * Redis options (only used when backend is 'redis' or auto-detect chooses redis)
+ *
+ * If null, we fall back to ini_get('session.save_path') which for Redis is often:
+ *   localhost:6379:server:password
+ */
+// Your redis style: host:port:db:password
+$config['watchtower_redis_dsn']    = 'localhost:6379:1:password';
+$config['watchtower_redis_prefix'] = ''; 
+
+/**
+ * APCu options (only used when backend is 'apcu' or auto-detect chooses apcu)
+ *
+ * We scan APCu keys and pick those starting with this prefix.
+ */
+// $config['watchtower_apcu_prefix']  = '';

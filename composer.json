@@ -1,0 +1,27 @@
+{
+  "name": "texxasrulez/watchtower",
+  "description": "Watchtower - session and login monitoring plugin for Roundcube",
+  "type": "roundcube-plugin",
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/texxasrulez/watchtower",
+  "support": {
+    "issues": "https://github.com/texxasrulez/watchtower/issues",
+    "source": "https://github.com/texxasrulez/watchtower"
+  },
+  "require": {
+    "php": ">=7.4"
+  },
+  "authors": [
+    {
+      "name": "Gene Hawkins",
+      "email": "texxasrulez@yahoo.com",
+      "role": "Lead"
+    }
+  ],
+  "extra": {
+    "roundcube": {
+      "min-version": "1.6.0"
+    }
+  }
+}
+
