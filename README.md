@@ -51,7 +51,7 @@ This baseline:
 
 ## Extending Watchtower
 
-Next steps you can add on top of this baseline:
+Next steps I want to add to this plugin:
 
 - Define "active" vs "stale" session rules.
 - Create your own `watchtower_sessions` table and log full login events
