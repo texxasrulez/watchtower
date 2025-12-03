@@ -39,11 +39,14 @@ This baseline:
 
 ## Skins & Icons
 
-- Larry:
+- Larry (and my 10 Colorized Larry Variants):
   - Two separate images for the Settings icon: normal and active.
-  - Icons live in `skins/larry/images/` as PNGs you can replace.
+  - Icons live in `skins/larry/images/` as SVGs you can replace.
 
 - Elastic:
+  - Neutral layout and CSS, no sprite assumptions.
+  
+- Classic (I am nostalgic):
   - Neutral layout and CSS, no sprite assumptions.
 
 ## Extending Watchtower
@@ -54,3 +57,18 @@ Next steps you can add on top of this baseline:
 - Create your own `watchtower_sessions` table and log full login events
   including user-agent and geoinfo.
 - Add filters and a "suspicious activity" tab.
+
+Enjoy!
+
+:moneybag: **Donations** :moneybag:
+
+If you use this plugin and would like to show your appreciation by buying me a cup of coffee, I surely would appreciate it. A regular cup of Joe is sufficient, but a Starbucks Coffee would be better ... \
+Zelle (Zelle is integrated within many major banks Mobile Apps by default) - Just send to texxasrulez at yahoo dot com \
+No Zelle in your banks mobile app, no problem, just click [Paypal](https://paypal.me/texxasrulez?locale.x=en_US) and I can make a Starbucks run ...
+
+I appreciate the interest in this plugin and hope all the best ...
+
+**Screenshot**
+-----------
+
+![Alt text](/images/screenshot.png?raw=true "Watchtower Screenshot")
