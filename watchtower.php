@@ -690,12 +690,10 @@ class watchtower extends rcube_plugin
     protected function load_login_log()
     {
         $config  = $this->rc->config;
-        $logfile = $config->get('watchtower_logins_file', 'logs/userlogins.log');
-
-        // Resolve relative to Roundcube root
-        if ($logfile && $logfile[0] !== '/' && defined('RCUBE_INSTALL_PATH')) {
-            $logfile = RCUBE_INSTALL_PATH . $logfile;
-        }
+        $logfile = $this->resolve_log_file_path(
+            (string) $config->get('watchtower_logins_file', 'logs/userlogins.log')
+        );
+        $this->debug_log('resolved login log file', array('file' => $logfile));
 
         if (!is_readable($logfile)) {
             $this->debug_log('login log file not readable', array('file' => $logfile));
@@ -713,12 +711,16 @@ class watchtower extends rcube_plugin
         }
 
         $events = array();
+        $total_lines = 0;
+        $parsed_lines = 0;
+        $first_unmatched = null;
 
         foreach ($lines as $line) {
             $line = trim($line);
             if ($line === '') {
                 continue;
             }
+            $total_lines++;
 
             // 1) Try JSONL (our structured format)
             $data = json_decode($line, true);
@@ -730,6 +732,7 @@ class watchtower extends rcube_plugin
                     'device'    => isset($data['device']) ? $data['device'] : '',
                     'success'   => !empty($data['success']),
                 );
+                $parsed_lines++;
                 continue;
             }
 
@@ -737,11 +740,25 @@ class watchtower extends rcube_plugin
             $parsed = $this->parse_roundcube_log_line($line);
             if ($parsed) {
                 $events[] = $parsed;
+                $parsed_lines++;
                 continue;
             }
 
             // Unknown format → skip silently
+            if ($first_unmatched === null) {
+                $first_unmatched = substr($line, 0, 250);
+            }
         }
+
+        $ctx = array(
+            'file'         => $logfile,
+            'total_lines'  => $total_lines,
+            'parsed_lines' => $parsed_lines,
+        );
+        if ($first_unmatched !== null) {
+            $ctx['first_unmatched'] = $first_unmatched;
+        }
+        $this->debug_log('login log parse summary', $ctx);
 
         return $events;
     }
@@ -754,13 +771,32 @@ class watchtower extends rcube_plugin
      */
     protected function parse_roundcube_log_line($line)
     {
-        $pattern = '/^\[(?P<ts>[^\]]+)\]:\s+<[^>]+>\s+(?P<result>[A-Z]+)\s+login\s+for\s+(?P<user>\S+)\s+from\s+(?P<ip>\S+)/i';
+        $patterns = array(
+            // e.g. [date]: <id> FAILED login for user@example from 1.2.3.4
+            '/^\[(?P<ts>[^\]]+)\]:\s+(?:<[^>]+>\s+)?(?P<result>FAILED|SUCCESSFUL|SUCCESS|OK)\s+login\s+for\s+(?P<user>\S+)(?:\s+\(ID:\s*\d+\))?\s+from\s+(?P<ip>\S+)/i',
+            // e.g. [date]: <id> Login failed for user@example from 1.2.3.4
+            '/^\[(?P<ts>[^\]]+)\]:\s+(?:<[^>]+>\s+)?login\s+(?P<result>failed|successful|succeeded)\s+for\s+(?P<user>\S+)(?:\s+\(ID:\s*\d+\))?\s+from\s+(?P<ip>\S+)/i',
+            // e.g. [date]: <id> [imap] Authenticated login for user@example from 1.2.3.4
+            '/^\[(?P<ts>[^\]]+)\]:\s+(?:<[^>]+>\s+)?(?P<result>.*?)\blogin\b.*?\bfor\b\s+(?P<user>\S+)(?:\s+\(ID:\s*\d+\))?\s+\bfrom\b\s+(?P<ip>\S+)/i',
+        );
 
-        if (!preg_match($pattern, $line, $m)) {
+        $m = null;
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $line, $m)) {
+                break;
+            }
+            $m = null;
+        }
+
+        if (!$m) {
             return null;
         }
 
-        $success = (strtoupper($m['result']) !== 'FAILED');
+        $result = strtoupper((string) $m['result']);
+        $success = !in_array($result, array('FAILED', 'FAIL', 'ERROR'), true)
+            && strpos($result, 'FAIL') === false
+            && strpos($result, 'ERROR') === false
+            && strpos($result, 'DENIED') === false;
 
         return array(
             'timestamp' => $m['ts'],
@@ -992,13 +1028,35 @@ class watchtower extends rcube_plugin
     }
 
     /**
-     * Debug logger.
-     * When $force = true, it will log regardless of config flag.
+     * Normalize debug config into a strict boolean.
+     */
+    protected function is_debug_enabled()
+    {
+        $raw = $this->rc->config->get('watchtower_debug', false);
+
+        if (is_bool($raw)) {
+            return $raw;
+        }
+
+        if (is_int($raw) || is_float($raw)) {
+            return ((int) $raw) !== 0;
+        }
+
+        if (is_string($raw)) {
+            $value = filter_var($raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            return $value === null ? false : $value;
+        }
+
+        return !empty($raw);
+    }
+
+    /**
+     * Debug logger, respects watchtower_debug config flag.
+     * $force retained for backward compatibility, ignored intentionally.
      */
     protected function debug_log($message, array $context = array(), $force = false)
     {
-        // Normal gate
-        if (!$force && !$this->rc->config->get('watchtower_debug', false)) {
+        if (!$this->is_debug_enabled()) {
             return;
         }
 
@@ -1013,7 +1071,6 @@ class watchtower extends rcube_plugin
 
         $file = rtrim($log_dir, '/\\') . '/watchtower-debug.log';
 
-        $line = date('Y-m-d H:i:s') . ' $message';
         $line = date('Y-m-d H:i:s') . ' ' . $message;
         if (!empty($context)) {
             $json = json_encode($context);
@@ -1024,5 +1081,55 @@ class watchtower extends rcube_plugin
         $line .= "\n";
 
         @file_put_contents($file, $line, FILE_APPEND);
+    }
+
+    /**
+     * Resolve login log file path.
+     * Supports:
+     * - absolute path
+     * - path relative to RCUBE_INSTALL_PATH
+     * - basename relative to Roundcube log_dir
+     */
+    protected function resolve_log_file_path($value)
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            $value = 'logs/userlogins.log';
+        }
+
+        if ($value[0] === '/' || preg_match('/^[A-Za-z]:[\\\\\\/]/', $value)) {
+            return $value;
+        }
+
+        $normalized = str_replace('\\', '/', $value);
+        $is_basename = strpos($normalized, '/') === false;
+
+        $log_dir = (string) $this->rc->config->get('log_dir', 'logs');
+        if ($log_dir !== '') {
+            if ($log_dir[0] !== '/' && !preg_match('/^[A-Za-z]:[\\\\\\/]/', $log_dir) && defined('RCUBE_INSTALL_PATH')) {
+                $log_dir = $this->join_paths(RCUBE_INSTALL_PATH, $log_dir);
+            }
+            $log_dir = rtrim($log_dir, '/\\');
+            if ($log_dir !== '' && ($is_basename || strpos($normalized, 'logs/') === 0)) {
+                $candidate = $log_dir . '/' . ($is_basename ? $normalized : substr($normalized, 5));
+                if (is_readable($candidate)) {
+                    return $candidate;
+                }
+            }
+        }
+
+        if (defined('RCUBE_INSTALL_PATH')) {
+            return $this->join_paths(RCUBE_INSTALL_PATH, $value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Join two path fragments with exactly one directory separator.
+     */
+    protected function join_paths($base, $path)
+    {
+        return rtrim((string) $base, '/\\') . '/' . ltrim((string) $path, '/\\');
     }
 }
