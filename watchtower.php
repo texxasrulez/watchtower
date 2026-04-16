@@ -2,7 +2,7 @@
 
 class watchtower extends rcube_plugin
 {
-    const PLUGIN_VERSION = '1.0.0';
+    const PLUGIN_VERSION = '1.0.1';
     const PLUGIN_INFO = array(
         'name' => 'watchtower',
         'vendor' => 'Gene Hawkins',
@@ -205,7 +205,13 @@ class watchtower extends rcube_plugin
         $sess_table  = $this->rc->config->get('db_table_session', 'session');
         $users_table = $this->rc->config->get('db_table_users', 'users');
 
-        $sql = "SELECT sess_id, changed, ip, vars FROM $sess_table ORDER BY changed DESC LIMIT 200";
+        $columns      = $this->get_table_columns($sess_table);
+        $changed_col  = $this->pick_first_column($columns, array('changed', 'created', 'expires'));
+        $ip_expr      = in_array('ip', $columns, true) ? 'ip' : "'' AS ip";
+        $changed_expr = $changed_col ? $changed_col . ' AS changed' : 'NULL AS changed';
+        $order_by     = $changed_col ? " ORDER BY $changed_col DESC" : '';
+
+        $sql = "SELECT sess_id, $changed_expr, $ip_expr, vars FROM $sess_table$order_by LIMIT 200";
         $res = $db->query($sql);
 
         if (!$res) {
@@ -251,7 +257,120 @@ class watchtower extends rcube_plugin
             );
         }
 
+        if (!$changed_col && count($rows) > 1) {
+            usort($rows, array($this, 'sort_session_rows_by_changed_desc'));
+        }
+
         return $rows;
+    }
+
+    /**
+     * Return a normalized list of columns for a configured DB table.
+     */
+    protected function get_table_columns($table)
+    {
+        $db       = $this->rc->get_dbh();
+        $provider = strtolower((string) ($db->db_provider ?? ''));
+        $res      = null;
+        $field    = null;
+
+        if (strpos($provider, 'mysql') === 0) {
+            $res   = $db->query("SHOW COLUMNS FROM $table");
+            $field = 'Field';
+        } elseif ($provider === 'postgres') {
+            list($schema, $name) = $this->split_table_identifier($table, 'public');
+            $res = $db->query(
+                'SELECT column_name FROM information_schema.columns WHERE table_schema = ? AND table_name = ?',
+                $schema,
+                $name
+            );
+            $field = 'column_name';
+        } elseif (strpos($provider, 'sqlite') === 0) {
+            list(, $name) = $this->split_table_identifier($table, null);
+            $res   = $db->query('PRAGMA table_info(' . $name . ')');
+            $field = 'name';
+        }
+
+        if (!$res || !$field) {
+            return array();
+        }
+
+        $columns = array();
+
+        while ($row = $db->fetch_assoc($res)) {
+            if (!empty($row[$field])) {
+                $columns[] = strtolower((string) $row[$field]);
+            }
+        }
+
+        return array_values(array_unique($columns));
+    }
+
+    /**
+     * Pick the first available column from a candidate list.
+     */
+    protected function pick_first_column(array $columns, array $candidates)
+    {
+        foreach ($candidates as $candidate) {
+            if (in_array($candidate, $columns, true)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Split a schema-qualified table identifier into [schema, table].
+     */
+    protected function split_table_identifier($table, $default_schema = null)
+    {
+        $parts = explode('.', (string) $table, 2);
+
+        if (count($parts) === 1) {
+            return array($default_schema, $this->unquote_identifier($parts[0]));
+        }
+
+        return array(
+            $this->unquote_identifier($parts[0]),
+            $this->unquote_identifier($parts[1]),
+        );
+    }
+
+    /**
+     * Strip common SQL identifier quoting.
+     */
+    protected function unquote_identifier($value)
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return $value;
+        }
+
+        $first = $value[0];
+        $last  = substr($value, -1);
+
+        if (($first === '"' && $last === '"') || ($first === '`' && $last === '`') || ($first === '[' && $last === ']')) {
+            return substr($value, 1, -1);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Sort session rows newest-first using the normalized numeric sort key.
+     */
+    protected function sort_session_rows_by_changed_desc(array $a, array $b)
+    {
+        $a_sort = (int) ($a['changed_sort'] ?? 0);
+        $b_sort = (int) ($b['changed_sort'] ?? 0);
+
+        if ($a_sort === $b_sort) {
+            return 0;
+        }
+
+        return ($a_sort > $b_sort) ? -1 : 1;
     }
 
     /**
