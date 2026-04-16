@@ -2,6 +2,20 @@
 
 class watchtower extends rcube_plugin
 {
+    const PLUGIN_VERSION = '1.0.0';
+    const PLUGIN_INFO = array(
+        'name' => 'watchtower',
+        'vendor' => 'Gene Hawkins',
+        'version' => self::PLUGIN_VERSION,
+        'license' => 'GPL-3.0',
+        'uri' => 'https://github.com/texxasrulez/watchtower',
+    );
+
+    public static function info(): array
+    {
+        return self::PLUGIN_INFO;
+    }
+
     public $task = 'settings';
 
     /**
@@ -124,6 +138,8 @@ class watchtower extends rcube_plugin
         $html .= $this->render_logins_table($logins);
         $html .= '</div>';
         $html .= '</div>';
+
+        $html .= $this->render_sorting_script();
 
         $html .= '</div>'; // #watchtower-settings
 
@@ -676,6 +692,7 @@ class watchtower extends rcube_plugin
         return array(
             'sess_id'    => $sess_id,
             'changed'    => $changed_out,
+            'changed_sort' => $this->to_unix_timestamp($changed_out),
             'ip'         => $ip_out,
             'user_id'    => $user_id,
             'user'       => $username,
@@ -727,6 +744,7 @@ class watchtower extends rcube_plugin
             if (is_array($data)) {
                 $events[] = array(
                     'timestamp' => isset($data['timestamp']) ? $data['timestamp'] : '',
+                    'timestamp_sort' => $this->to_unix_timestamp(isset($data['timestamp']) ? $data['timestamp'] : ''),
                     'user'      => isset($data['user']) ? $data['user'] : '',
                     'ip'        => isset($data['ip']) ? $data['ip'] : '',
                     'device'    => isset($data['device']) ? $data['device'] : '',
@@ -800,6 +818,7 @@ class watchtower extends rcube_plugin
 
         return array(
             'timestamp' => $m['ts'],
+            'timestamp_sort' => $this->to_unix_timestamp($m['ts']),
             'user'      => $m['user'],
             'ip'        => $m['ip'],
             'device'    => $this->gettext('roundcube_web'),
@@ -837,12 +856,14 @@ class watchtower extends rcube_plugin
                 $user_label = '';
             }
 
+            $changed_sort = isset($row['changed_sort']) ? (string) $row['changed_sort'] : (string) $this->to_unix_timestamp($row['changed']);
+
             $h .= '<tr>';
-            $h .= '<td>' . rcube::Q($row['changed']) . '</td>';
-            $h .= '<td>' . rcube::Q($user_label) . '</td>';
-            $h .= '<td>' . rcube::Q($row['ip']) . '</td>';
-            $h .= '<td>' . rcube::Q($row['imap_host']) . '</td>';
-            $h .= '<td class="watchtower-agent">' . rcube::Q($row['user_agent']) . '</td>';
+            $h .= '<td data-sort="' . rcube::Q($changed_sort) . '">' . rcube::Q($row['changed']) . '</td>';
+            $h .= '<td data-sort="' . rcube::Q(mb_strtolower((string) $user_label, 'UTF-8')) . '">' . rcube::Q($user_label) . '</td>';
+            $h .= '<td data-sort="' . rcube::Q(mb_strtolower((string) $row['ip'], 'UTF-8')) . '">' . rcube::Q($row['ip']) . '</td>';
+            $h .= '<td data-sort="' . rcube::Q(mb_strtolower((string) $row['imap_host'], 'UTF-8')) . '">' . rcube::Q($row['imap_host']) . '</td>';
+            $h .= '<td class="watchtower-agent" data-sort="' . rcube::Q(mb_strtolower((string) $row['user_agent'], 'UTF-8')) . '">' . rcube::Q($row['user_agent']) . '</td>';
             $h .= '</tr>';
         }
 
@@ -874,13 +895,14 @@ class watchtower extends rcube_plugin
         foreach ($events as $row) {
             $class = $row['success'] ? 'result-ok' : 'result-fail';
             $label = $row['success'] ? $this->gettext('result_ok') : $this->gettext('result_fail');
+            $timestamp_sort = isset($row['timestamp_sort']) ? (string) $row['timestamp_sort'] : (string) $this->to_unix_timestamp($row['timestamp']);
 
             $h .= '<tr>';
-            $h .= '<td>' . rcube::Q($row['timestamp']) . '</td>';
-            $h .= '<td>' . rcube::Q($row['user']) . '</td>';
-            $h .= '<td>' . rcube::Q($row['ip']) . '</td>';
-            $h .= '<td class="watchtower-device">' . rcube::Q($row['device']) . '</td>';
-            $h .= '<td class="watchtower-result ' . $class . '">' . rcube::Q($label) . '</td>';
+            $h .= '<td data-sort="' . rcube::Q($timestamp_sort) . '">' . rcube::Q($row['timestamp']) . '</td>';
+            $h .= '<td data-sort="' . rcube::Q(mb_strtolower((string) $row['user'], 'UTF-8')) . '">' . rcube::Q($row['user']) . '</td>';
+            $h .= '<td data-sort="' . rcube::Q(mb_strtolower((string) $row['ip'], 'UTF-8')) . '">' . rcube::Q($row['ip']) . '</td>';
+            $h .= '<td class="watchtower-device" data-sort="' . rcube::Q(mb_strtolower((string) $row['device'], 'UTF-8')) . '">' . rcube::Q($row['device']) . '</td>';
+            $h .= '<td class="watchtower-result ' . $class . '" data-sort="' . ($row['success'] ? '1' : '0') . '">' . rcube::Q($label) . '</td>';
             $h .= '</tr>';
         }
 
@@ -894,21 +916,125 @@ class watchtower extends rcube_plugin
      */
     protected function format_timestamp($value)
     {
-        if ($value === null || $value === '') {
-            return '';
-        }
-
-        if (is_numeric($value)) {
-            $ts = (int) $value;
-        } else {
-            $ts = @strtotime($value);
-        }
+        $ts = $this->to_unix_timestamp($value);
 
         if (!$ts) {
             return (string) $value;
         }
 
         return date('Y-m-d H:i:s', $ts);
+    }
+
+    /**
+     * Normalize a timestamp-like value to a unix timestamp.
+     */
+    protected function to_unix_timestamp($value)
+    {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        $ts = @strtotime((string) $value);
+
+        return $ts ? (int) $ts : 0;
+    }
+
+    /**
+     * Attach client-side sorting to all Watchtower tables.
+     */
+    protected function render_sorting_script()
+    {
+        return "<script type=\"text/javascript\">\n"
+            . "(function() {\n"
+            . "  function normalize(value) {\n"
+            . "    return (value || '').toString().trim();\n"
+            . "  }\n"
+            . "\n"
+            . "  function sortTable(table, colIndex, direction) {\n"
+            . "    var tbody = table.tBodies[0];\n"
+            . "    if (!tbody) {\n"
+            . "      return;\n"
+            . "    }\n"
+            . "\n"
+            . "    var rows = Array.prototype.slice.call(tbody.rows);\n"
+            . "\n"
+            . "    rows.sort(function(rowA, rowB) {\n"
+            . "      var cellA = rowA.cells[colIndex];\n"
+            . "      var cellB = rowB.cells[colIndex];\n"
+            . "\n"
+            . "      var rawA = cellA ? (cellA.getAttribute('data-sort') || cellA.textContent) : '';\n"
+            . "      var rawB = cellB ? (cellB.getAttribute('data-sort') || cellB.textContent) : '';\n"
+            . "\n"
+            . "      var valA = normalize(rawA);\n"
+            . "      var valB = normalize(rawB);\n"
+            . "\n"
+            . "      var numA = parseFloat(valA);\n"
+            . "      var numB = parseFloat(valB);\n"
+            . "      var bothNumeric = valA !== '' && valB !== '' && !isNaN(numA) && !isNaN(numB);\n"
+            . "\n"
+            . "      var cmp;\n"
+            . "      if (bothNumeric) {\n"
+            . "        cmp = numA - numB;\n"
+            . "      } else {\n"
+            . "        cmp = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });\n"
+            . "      }\n"
+            . "\n"
+            . "      return direction === 'asc' ? cmp : -cmp;\n"
+            . "    });\n"
+            . "\n"
+            . "    rows.forEach(function(row) {\n"
+            . "      tbody.appendChild(row);\n"
+            . "    });\n"
+            . "  }\n"
+            . "\n"
+            . "  function initTable(table) {\n"
+            . "    var headers = table.querySelectorAll('thead th');\n"
+            . "    headers.forEach(function(header, index) {\n"
+            . "      header.style.cursor = 'pointer';\n"
+            . "      header.setAttribute('tabindex', '0');\n"
+            . "      header.setAttribute('role', 'button');\n"
+            . "      header.setAttribute('aria-sort', 'none');\n"
+            . "\n"
+            . "      var activateSort = function() {\n"
+            . "        var current = header.getAttribute('data-sort-dir') || 'none';\n"
+            . "        var next = current === 'asc' ? 'desc' : 'asc';\n"
+            . "\n"
+            . "        headers.forEach(function(other) {\n"
+            . "          other.setAttribute('data-sort-dir', 'none');\n"
+            . "          other.setAttribute('aria-sort', 'none');\n"
+            . "        });\n"
+            . "\n"
+            . "        header.setAttribute('data-sort-dir', next);\n"
+            . "        header.setAttribute('aria-sort', next === 'asc' ? 'ascending' : 'descending');\n"
+            . "        sortTable(table, index, next);\n"
+            . "      };\n"
+            . "\n"
+            . "      header.addEventListener('click', activateSort);\n"
+            . "      header.addEventListener('keydown', function(e) {\n"
+            . "        if (e.key === 'Enter' || e.key === ' ') {\n"
+            . "          e.preventDefault();\n"
+            . "          activateSort();\n"
+            . "        }\n"
+            . "      });\n"
+            . "    });\n"
+            . "  }\n"
+            . "\n"
+            . "  function init() {\n"
+            . "    var tables = document.querySelectorAll('#watchtower-settings table.watchtower-table');\n"
+            . "    tables.forEach(initTable);\n"
+            . "  }\n"
+            . "\n"
+            . "  if (document.readyState === 'loading') {\n"
+            . "    document.addEventListener('DOMContentLoaded', init);\n"
+            . "  } else {\n"
+            . "    init();\n"
+            . "  }\n"
+            . "})();\n"
+            . "</script>";
     }
 
     /**

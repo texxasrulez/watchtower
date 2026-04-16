@@ -73,3 +73,15 @@ I appreciate the interest in this plugin and hope all the best ...
 -----------
 
 ![Alt text](/images/screenshot.png?raw=true "Watchtower Screenshot")
+
+## Versioning
+- `watchtower` now keeps its canonical version in `watchtower::PLUGIN_VERSION` inside `watchtower.php`.
+- `watchtower::info()` exposes the plugin metadata array used for self-identification.
+- Development builds should use a `+dev` suffix such as `1.0.0+dev`.
+- Release builds should use a clean tagged version such as `1.0.0`.
+
+For a release bump:
+1. Update `watchtower::PLUGIN_VERSION` in `watchtower.php` or run `sh scripts/bump-version.sh 1.0.0`.
+2. Update `CHANGELOG.md`.
+3. Create the matching release tag after verification.
+
