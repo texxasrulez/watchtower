@@ -40,8 +40,25 @@ class watchtower extends rcube_plugin
         $this->add_hook('settings_actions', array($this, 'settings_actions'));
 
         // Load skin-specific CSS on ALL settings pages
-         $skin_path = $this->local_skin_path();
-         $this->include_stylesheet($skin_path . '/watchtower.css');
+        
+        // determine the skin path, supporting child themes natively if the method exists
+        if (method_exists($this, 'local_skin_path')) {
+            $skin_css = $this->local_skin_path() . '/watchtower.css';
+        } else {
+            // backwards compatibility fallback for older Roundcube versions
+            $skin = $this->rc->config->get('skin', 'elastic');
+            $skin_css = 'skins/' . $skin . '/watchtower.css';
+        }
+
+        // fall back to the default 'elastic' skin path if the first path doesn't exist
+        if (!file_exists(__DIR__ . '/' . $skin_css)) {
+            $skin_css = 'skins/elastic/watchtower.css';
+        }
+
+        // load the skin-specific overrides if found
+        if (file_exists(__DIR__ . '/' . $skin_css)) {
+            $this->include_stylesheet($skin_css);
+        }
 
         // Register action handler for ?_task=settings&_action=plugin.watchtower
         $this->register_action('plugin.watchtower', array($this, 'settings_init'));
